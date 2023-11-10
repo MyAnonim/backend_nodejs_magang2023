@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id       Int     @id
+  username String  @unique @db.VarChar(50)
+  password String  @db.VarChar(10)
+  token    String? @db.VarChar(255)
+  nama     String  @db.VarChar(100)
+  jabatan  String  @db.VarChar(100)
+  log      Log[]
+}
+
+model Dblocker {
+  id         Int      @id @default(autoincrement())
+  nomor_seri String   @db.VarChar(60)
+  area_name  String   @db.VarChar(100)
+  ip_addr    String   @db.VarChar(15)
+  latitude   String
+  longitude  String
+  createdAt  DateTime @default(now()) @db.Date
+  updatedAt  DateTime @updatedAt @db.Date
+  log        Log[]
+}
+
+enum Turn {
+  on
+  off
+  disabled
+}
+
+model Log {
+  id          Int      @id @default(autoincrement())
+  timestamp   DateTime @default(now())
+  users       Users    @relation(fields: [users_id], references: [id])
+  users_id    Int // relation scalar field (used in the `@relation` attribute above)
+  nama_user   String   @db.VarChar(100)
+  dblocker    Dblocker @relation(fields: [dblocker_id], references: [id])
+  dblocker_id Int // relation scalar field (used in the `@relation` attribute above)
+  area_name   String   @db.VarChar(100)
+  rc_state    Turn     @default(disabled)
+  gps_state   Turn     @default(disabled)
+  temp        Decimal?
+
+  @@index([timestamp])
+}
