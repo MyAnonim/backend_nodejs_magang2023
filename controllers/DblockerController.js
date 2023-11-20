@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { time } from "console";
+import axios from "axios";
 
 const prisma = new PrismaClient();
 
@@ -11,26 +11,53 @@ export const getDrone = async (req, res) => {
           select: {
             rc_state: true,
             gps_state: true,
+            temp: true,
           },
         },
       },
     });
 
+    // Pengecekan apakah data tidak kosong
+    if (data.length === 0) {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          dblockers: [],
+        },
+      });
+    }
+
+    // Mendapatkan objek tanggal dari createdAt
+    const createdAtDate = data[0]?.createdAt;
+
+    // Memformat tanggal menjadi "DD-MM-YYYY"
+    const day = createdAtDate.getDate().toString().padStart(2, "0");
+    const month = (createdAtDate.getMonth() + 1).toString().padStart(2, "0");
+    const year = createdAtDate.getFullYear();
+
+    const tgl_aktif = `${day}-${month}-${year}`;
+
     const dblockers = data.map((dblocker) => {
-      const { id, nomor_seri, ip_addr, latitude, longitude, createdAt, log } =
+      const { id, nomor_seri, ip_addr, latitude, longitude, log, area_name } =
         dblocker;
-      const jammer_rc = log[0].rc_state;
-      const jammer_gps = log[0].gps_state;
+      // Mengambil data terakhir dari log jika tersedia
+      const lastLog = log.length > 0 ? log[log.length - 1] : null;
+
+      const jammer_rc = lastLog ? lastLog.rc_state : null;
+      const jammer_gps = lastLog ? lastLog.gps_state : null;
+      const temp = lastLog ? lastLog.temp : null;
 
       return {
         id,
         no_seri: nomor_seri,
         ip_addr,
+        area_name,
         latitude,
         longitude,
-        tgl_aktif: createdAt,
+        tgl_aktif: tgl_aktif,
         jammer_rc,
         jammer_gps,
+        temp,
       };
     });
 
@@ -64,9 +91,19 @@ export const getDroneById = async (req, res) => {
         },
       },
     });
+    // Mendapatkan objek tanggal dari createdAt
+    const createdAtDate = data[0].createdAt;
+
+    // Memformat tanggal menjadi "DD-MM-YYYY"
+    const day = createdAtDate.getDate().toString().padStart(2, "0");
+    const month = (createdAtDate.getMonth() + 1).toString().padStart(2, "0");
+    const year = createdAtDate.getFullYear();
+
+    const tgl_aktif = `${day}-${month}-${year}`;
 
     const dblockers = data.map((dblocker) => {
-      const { id, nomor_seri, ip_addr, location, createdAt, log } = dblocker;
+      const { id, nomor_seri, ip_addr, latitude, longitude, log, area_name } =
+        dblocker;
       const jammer_rc = log[0].rc_state;
       const jammer_gps = log[0].gps_state;
 
@@ -74,8 +111,10 @@ export const getDroneById = async (req, res) => {
         id,
         no_seri: nomor_seri,
         ip_addr,
-        location: location,
-        tgl_aktif: createdAt,
+        area_name,
+        latitude,
+        longitude,
+        tgl_aktif: tgl_aktif,
         jammer_rc,
         jammer_gps,
       };
@@ -93,7 +132,7 @@ export const getDroneById = async (req, res) => {
 };
 
 export const addDrone = async (req, res) => {
-  const { nomor_seri, area_name, ip_addr, latitude, longitude } = req.body;
+  const { nomor_seri, area_name, ip_addr, location } = req.body;
 
   try {
     const refreshToken = req.cookies.refreshToken;
@@ -104,13 +143,20 @@ export const addDrone = async (req, res) => {
       },
     });
 
+    // Mendapatkan latitude dan longitude dari properti 'location'
+    const [latitude, longitude] = location;
+
+    // Mengonversi latitude dan longitude ke dalam format string
+    const latitudeString = latitude.toString();
+    const longitudeString = longitude.toString();
+
     const dblockers = await prisma.dblocker.create({
       data: {
         nomor_seri: nomor_seri,
         area_name: area_name,
         ip_addr: ip_addr,
-        latitude: latitude,
-        longitude: longitude,
+        latitude: latitudeString,
+        longitude: longitudeString,
       },
     });
 
@@ -123,15 +169,24 @@ export const addDrone = async (req, res) => {
       },
     });
 
+    // Mendapatkan objek tanggal dari createdAt
+    const createdAtDate = dblockers.createdAt;
+
+    // Memformat tanggal menjadi "DD-MM-YYYY"
+    const day = createdAtDate.getDate().toString().padStart(2, "0");
+    const month = (createdAtDate.getMonth() + 1).toString().padStart(2, "0");
+    const year = createdAtDate.getFullYear();
+
+    const tgl_aktif = `${day}-${month}-${year}`;
+
     res.status(201).json({
       status: "success",
       data: {
         id: dblockers.id,
         no_seri: nomor_seri,
         ip_addr: ip_addr,
-        latitude: latitude,
-        longitude: longitude,
-        tgl_aktif: dblockers.createdAt,
+        location: [latitude, longitude],
+        tgl_aktif: tgl_aktif,
         jammer_rc: logs.rc_state,
         jammer_gps: logs.gps_state,
       },
@@ -146,9 +201,15 @@ export const addDrone = async (req, res) => {
 };
 
 export const updateDrone = async (req, res) => {
-  const { nomor_seri, area_name, ip_addr, latitude, longitude } = req.body;
+  const { nomor_seri, area_name, ip_addr, location } = req.body;
 
   try {
+    const [latitude, longitude] = location;
+
+    // Mengonversi latitude dan longitude ke dalam format string
+    const latitudeString = latitude.toString();
+    const longitudeString = longitude.toString();
+
     const data = await prisma.dblocker.update({
       where: {
         id: Number(req.params.id),
@@ -157,36 +218,63 @@ export const updateDrone = async (req, res) => {
         nomor_seri: nomor_seri,
         area_name: area_name,
         ip_addr: ip_addr,
-        latitude: latitude,
-        longitude: longitude,
+        latitude: latitudeString,
+        longitude: longitudeString,
       },
     });
     console.log(data);
 
-    const logs = await prisma.log.update({
+    const refreshToken = req.cookies.refreshToken;
+
+    const user = await prisma.users.findMany({
       where: {
-        id: data.id,
-      },
-      data: {
-        area_name: area_name,
+        token: refreshToken,
       },
       select: {
-        rc_state: true,
-        gps_state: true,
+        nama: true,
+        id: true,
       },
     });
 
+    const namaUser = user[0].nama;
+    const userId = user[0].id;
+
+    const logs = await prisma.log.create({
+      data: {
+        area_name: area_name,
+        nama_user: namaUser,
+        users: {
+          connect: {
+            id: userId, // ID pengguna yang sudah ada
+          },
+        },
+        dblocker: {
+          connect: {
+            id: Number(req.params.id), // ID objek dblocker yang sudah ada
+          },
+        },
+      },
+    });
+
+    // Mendapatkan objek tanggal dari createdAt
+    const createdAtDate = data.createdAt;
+
+    // Memformat tanggal menjadi "DD-MM-YYYY HH:mm:ss"
+    const day = createdAtDate.getDate().toString().padStart(2, "0");
+    const month = (createdAtDate.getMonth() + 1).toString().padStart(2, "0");
+    const year = createdAtDate.getFullYear();
+
+    const tgl_aktif = `${day}-${month}-${year}`;
+
     res.status(201).json({
-      status: "Success Update Drone",
+      status: "Success",
       data: {
         id: data.id,
         no_seri: data.nomor_seri,
         ip_addr: data.ip_addr,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        tgl_aktif: data.createdAt,
-        jammer_rc: logs.rc_state,
-        jammer_gps: logs.gps_state,
+        area_name: data.area_name,
+        location: [latitude, longitude],
+        tgl_aktif: tgl_aktif,
       },
     });
   } catch (error) {
@@ -199,8 +287,8 @@ export const updateDrone = async (req, res) => {
 };
 
 export const turnDrone = async (req, res) => {
-  const { user_id, dblocker_id, jammer_rc, jammer_gps } = req.body;
-  const idUser = Number(req.params.id); // Mengambil ID dari parameter URL
+  const { user_id, username, jammer_rc, jammer_gps } = req.body;
+  const dblockerId = Number(req.params.id); // Mengambil ID dari parameter URL
 
   try {
     const refreshToken = req.cookies.refreshToken;
@@ -210,42 +298,40 @@ export const turnDrone = async (req, res) => {
         token: refreshToken,
       },
     });
+
     const userId = user[0].id;
-    const namaUser = user[0].nama;
-    console.log(user);
+    const namaUser = user[0].username;
 
     const dblockers = await prisma.dblocker.findFirst({
-      where: { id: Number(dblocker_id) },
+      where: { id: Number(dblockerId) },
     });
 
-    if (!userId || userId.length === 0) {
-      return res.status(404).json({
-        status: "fail",
-        message: "ID user tidak ditemukan",
-      });
-    }
-    // Memeriksa apakah ID di body request sama dengan ID di token login
-    if (idUser !== userId) {
-      return res.status(400).json({
-        status: "fail",
-        message: "ID login tidak sesuai",
-      });
-    }
+    const ipAddr = dblockers.ip_addr;
+
     // Memeriksa apakah ID di body request sama dengan ID di URL
-    if (idUser !== Number(user_id)) {
+    if (userId !== Number(user_id)) {
       return res.status(400).json({
         status: "fail",
-        message: "ID tidak sesuai",
+        message: "Failed to Switch / Id not valid",
+      });
+    }
+    if (namaUser !== username) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Username not valid",
       });
     }
 
-    // // Kirim data ke ESP8266
-    // const responseFromESP = await axios.post(`http://${ip_addr}`, {
-    //   jammer_rc,
-    //   jammer_gps,
-    // });
+    // Kirim data ke ESP8266
+    const responseFromESP = await axios.post(`http://${ipAddr}/api/switch`, {
+      jammer_rc,
+      jammer_gps,
+    });
 
     // console.log(responseFromESP.data);
+    const rc = responseFromESP.data.data.jammer_rc;
+    const gps = responseFromESP.data.data.jammer_gps;
+    const temperature = responseFromESP.data.data.temp;
 
     // // Perbarui data di database berdasarkan respon dari ESP8266
     // await DblockerApi.update(
@@ -258,20 +344,31 @@ export const turnDrone = async (req, res) => {
     //   }
     // );
 
-    const logs = await prisma.log.update({
-      where: { id: dblockers.id },
+    const logs = await prisma.log.create({
       data: {
-        users_id: userId,
         nama_user: namaUser,
-        rc_state: jammer_rc,
-        gps_state: jammer_gps,
+        area_name: dblockers.area_name,
+        rc_state: rc,
+        gps_state: gps,
+        temp: temperature,
+        users: {
+          connect: {
+            id: userId, // ID pengguna yang sudah ada
+          },
+        },
+        dblocker: {
+          connect: {
+            id: dblockers.id, // ID objek dblocker yang sudah ada
+          },
+        },
       },
       include: {
         dblocker: {
           select: {
             nomor_seri: true,
             ip_addr: true,
-            location: true,
+            latitude: true,
+            longitude: true,
           },
         },
       },
@@ -283,16 +380,30 @@ export const turnDrone = async (req, res) => {
     //   jammer_gps: responseFromESP.data.jammer_gps_status,
     // });
 
+    // Mendapatkan objek tanggal dari createdAt
+    const createdAtDate = logs.timestamp;
+
+    // Memformat tanggal menjadi "DD-MM-YYYY HH:mm:ss"
+    const day = createdAtDate.getDate().toString().padStart(2, "0");
+    const month = (createdAtDate.getMonth() + 1).toString().padStart(2, "0");
+    const year = createdAtDate.getFullYear();
+    // const hours = createdAtDate.getHours().toString().padStart(2, "0");
+    // const minutes = createdAtDate.getMinutes().toString().padStart(2, "0");
+    // const seconds = createdAtDate.getSeconds().toString().padStart(2, "0");
+
+    const tgl_aktif = `${day}-${month}-${year}`;
+
     res.json({
       status: "success",
       data: {
         id: logs.id,
         no_seri: logs.dblocker.nomor_seri,
         ip_addr: logs.dblocker.ip_addr,
-        location: logs.dblocker.location,
-        tgl_aktif: logs.timestamp,
+        location: `${logs.dblocker.latitude},${logs.dblocker.longitude}`,
+        tgl_aktif: tgl_aktif,
         jammer_rc: logs.rc_state,
         jammer_gps: logs.gps_state,
+        temp: logs.temp,
       },
     });
   } catch (error) {

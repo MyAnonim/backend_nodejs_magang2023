@@ -35,7 +35,7 @@ CREATE TABLE `Log` (
     `area_name` VARCHAR(100) NOT NULL,
     `rc_state` ENUM('on', 'off', 'disabled') NOT NULL DEFAULT 'disabled',
     `gps_state` ENUM('on', 'off', 'disabled') NOT NULL DEFAULT 'disabled',
-    `temp` DECIMAL(65, 30) NULL,
+    `temp` DECIMAL(60, 2) NULL,
 
     INDEX `Log_timestamp_idx`(`timestamp`),
     PRIMARY KEY (`id`)

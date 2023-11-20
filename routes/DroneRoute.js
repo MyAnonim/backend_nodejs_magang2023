@@ -11,11 +11,11 @@ import { verifyToken } from "../middleware/VerifyToken.js";
 
 const router = express.Router();
 
-router.get("/drone", verifyToken, getDrone);
-router.get("/drone/:id", verifyToken, getDroneById);
-router.post("/drone", verifyToken, addDrone);
-router.patch("/drone/:id", verifyToken, updateDrone);
-router.post("/drone/:id", verifyToken, turnDrone);
+router.get("/api/dblockers", verifyToken, getDrone);
+router.get("/api/dblockers/:id", verifyToken, getDroneById);
+router.post("/api/dblockers", verifyToken, addDrone);
+router.patch("/api/dblcokers/:id", verifyToken, updateDrone);
+router.post("/api/dblockers/:id", verifyToken, turnDrone);
 router.delete("/drone/:id", verifyToken, deleteDrone);
 
 export default router;

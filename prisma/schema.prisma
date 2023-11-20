@@ -49,7 +49,7 @@ model Log {
   area_name   String   @db.VarChar(100)
   rc_state    Turn     @default(disabled)
   gps_state   Turn     @default(disabled)
-  temp        Decimal?
+  temp        Decimal? @db.Decimal(60, 2)
 
   @@index([timestamp])
 }
