@@ -21,25 +21,57 @@ export const getUsers = async (req, res) => {
   }
 };
 
+export const getUsersById = async (req, res) => {
+  try {
+    const data = await prisma.users.findMany({
+      where: {
+        id: Number(req.params.id),
+      },
+      select: {
+        id: true,
+        username: true,
+        nama: true,
+        jabatan: true,
+      },
+    });
+
+    res.status(200).json({
+      status: "success",
+      data,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ msg: error.message });
+  }
+};
+
 export const registerUsers = async (req, res) => {
   const { username, password, nama, id_karyawan, jabatan } = req.body;
   const idKaryawan = Number(id_karyawan);
   try {
     // Periksa apakah username sudah ada dalam database
-    const existingUser = await prisma.users.findFirst({ where: { username } });
-    const existingIdKaryawan = await prisma.users.findFirst({
+    const existingUsername = await prisma.users.findUnique({
+      where: { username: username },
+    });
+
+    // Periksa apakah idKaryawan sudah ada dalam database
+    const existingIdKaryawan = await prisma.users.findUnique({
       where: { id: idKaryawan },
     });
 
-    if (existingUser || existingIdKaryawan) {
+    if (existingUsername) {
       return res.status(400).json({
         status: "fail",
         message: "Username already registered",
       });
     }
 
-    // const salt = await bcrypt.genSalt();
-    // const hashPassword = await bcrypt.hash(password, salt);
+    if (existingIdKaryawan) {
+      return res.status(400).json({
+        status: "fail",
+        message: "ID Karyawan already registered",
+      });
+    }
 
     await prisma.users.create({
       data: {
@@ -73,6 +105,7 @@ export const loginUsers = async (req, res) => {
         username: req.body.username,
       },
     });
+    console.log(user[0]);
 
     if (req.body.password !== user[0].password)
       return res
@@ -91,17 +124,16 @@ export const loginUsers = async (req, res) => {
     const userId = user[0].id;
     const username = user[0].username;
     const nama = user[0].nama;
-    const id_karyawan = user[0].id_karyawan;
     const jabatan = user[0].jabatan;
     const accessToken = jwt.sign(
-      { userId, username, nama, id_karyawan, jabatan },
+      { userId, username, nama, jabatan },
       process.env.ACCESS_TOKEN_SECRET
       // {
       //   expiresIn: "15s",
       // }
     );
     const refreshToken = jwt.sign(
-      { userId, username, nama, id_karyawan, jabatan },
+      { userId, username, nama, jabatan },
       process.env.REFRESH_TOKEN_SECRET,
       {
         // expiresIn: Math.floor((nextMidnight - new Date()) / 1000), // Hitung selisih waktu dalam detik
@@ -116,11 +148,6 @@ export const loginUsers = async (req, res) => {
       },
     });
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      //   secure: true, //untuk https server global
-    });
-    res.cookie("accessToken", accessToken, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
       //   secure: true, //untuk https server global
@@ -175,6 +202,7 @@ export const logoutUsers = async (req, res) => {
 
 export const updateUsers = async (req, res) => {
   const { username, nama, jabatan } = req.body;
+  const userId = Number(req.params.id);
 
   try {
     // Periksa apakah username sudah ada dalam database
@@ -189,9 +217,18 @@ export const updateUsers = async (req, res) => {
       });
     }
 
+    await prisma.log.updateMany({
+      where: {
+        users_id: userId,
+      },
+      data: {
+        nama_user: nama,
+      },
+    });
+
     const data = await prisma.users.update({
       where: {
-        id: Number(req.params.id),
+        id: userId,
       },
       data: {
         username: username,
@@ -221,21 +258,28 @@ export const updateUsers = async (req, res) => {
 
 export const deleteUsers = async (req, res) => {
   try {
-    const user = await prisma.users.findFirst({
+    const users = Number(req.params.id);
+    // Mendapatkan data user
+    const user = await prisma.users.findUnique({
       where: {
-        id: Number(req.params.id),
+        id: users,
       },
     });
-    console.log(user);
-    if (!user) return res.status(404).json({ msg: "id users tidak ditemukan" });
 
+    if (!user) return res.status(404).json({ msg: "id users tidak ditemukan" });
     const userId = user.id;
-    const noSeri = user.no_seri;
-    const ipAddr = user.ip_addr;
+    const username = user.username;
+    const nama = user.nama;
+
+    await prisma.log.deleteMany({
+      where: {
+        users_id: userId,
+      },
+    });
 
     await prisma.users.delete({
       where: {
-        id: user.id,
+        id: userId,
       },
     });
 
@@ -243,8 +287,8 @@ export const deleteUsers = async (req, res) => {
       status: "success delete users",
       data: {
         user_id: userId,
-        no_seri: noSeri,
-        ip_addr: ipAddr,
+        username: username,
+        nama: nama,
       },
     });
   } catch (error) {

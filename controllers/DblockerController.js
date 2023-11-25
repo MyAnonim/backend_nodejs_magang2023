@@ -87,6 +87,7 @@ export const getDroneById = async (req, res) => {
           select: {
             rc_state: true,
             gps_state: true,
+            temp: true,
           },
         },
       },
@@ -104,8 +105,12 @@ export const getDroneById = async (req, res) => {
     const dblockers = data.map((dblocker) => {
       const { id, nomor_seri, ip_addr, latitude, longitude, log, area_name } =
         dblocker;
-      const jammer_rc = log[0].rc_state;
-      const jammer_gps = log[0].gps_state;
+      // Mengambil data terakhir dari log jika tersedia
+      const lastLog = log.length > 0 ? log[log.length - 1] : null;
+
+      const jammer_rc = lastLog ? lastLog.rc_state : null;
+      const jammer_gps = lastLog ? lastLog.gps_state : null;
+      const temp = lastLog ? lastLog.temp : null;
 
       return {
         id,
@@ -117,6 +122,7 @@ export const getDroneById = async (req, res) => {
         tgl_aktif: tgl_aktif,
         jammer_rc,
         jammer_gps,
+        temp,
       };
     });
 
@@ -159,7 +165,6 @@ export const addDrone = async (req, res) => {
         longitude: longitudeString,
       },
     });
-
     const logs = await prisma.log.create({
       data: {
         users_id: user[0].id,
@@ -300,7 +305,8 @@ export const turnDrone = async (req, res) => {
     });
 
     const userId = user[0].id;
-    const namaUser = user[0].username;
+    const Username = user[0].username;
+    const namaUser = user[0].nama;
 
     const dblockers = await prisma.dblocker.findFirst({
       where: { id: Number(dblockerId) },
@@ -315,7 +321,7 @@ export const turnDrone = async (req, res) => {
         message: "Failed to Switch / Id not valid",
       });
     }
-    if (namaUser !== username) {
+    if (Username !== username) {
       return res.status(400).json({
         status: "fail",
         message: "Username not valid",
