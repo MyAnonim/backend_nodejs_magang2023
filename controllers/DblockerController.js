@@ -309,8 +309,9 @@ export const turnDrone = async (req, res) => {
     const namaUser = user[0].nama;
 
     const dblockers = await prisma.dblocker.findFirst({
-      where: { id: Number(dblockerId) },
+      where: { id: dblockerId },
     });
+    console.log(dblockers);
 
     const ipAddr = dblockers.ip_addr;
 
@@ -429,7 +430,10 @@ export const deleteDrone = async (req, res) => {
       },
     });
     if (!drone)
-      return res.status(404).json({ msg: "Id Drone tidak ditemukan" });
+      return res.status(400).json({
+        status: "fail",
+        message: `Failed to delete [${req.params.id}] atau [${req.params.id}] not found`,
+      });
 
     await prisma.log.deleteMany({
       where: {
@@ -442,10 +446,15 @@ export const deleteDrone = async (req, res) => {
       },
     });
     res.status(200).json({
-      status: "Success Delete Drone",
-      data,
+      status: "success",
+      message: `[${data.id}] removed`,
     });
   } catch (error) {
-    res.status(400).json({ msg: error.message });
+    console.error(error); // Catat error untuk tujuan debugging
+
+    return res.status(500).json({
+      status: "error",
+      message: "Error server internal",
+    });
   }
 };

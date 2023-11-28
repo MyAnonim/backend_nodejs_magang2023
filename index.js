@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import DroneRoute from "./routes/DroneRoute.js";
 import UsersRoute from "./routes/UsersRoute.js";
 import TokenRoute from "./routes/TokenRoute.js";
+import LogsRoute from "./routes/LogsRoute.js";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+app.use(LogsRoute);
 app.use(DroneRoute);
 app.use(UsersRoute);
 app.use(TokenRoute);

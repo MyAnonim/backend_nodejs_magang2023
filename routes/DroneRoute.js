@@ -16,6 +16,6 @@ router.get("/api/dblockers/:id", verifyToken, getDroneById);
 router.post("/api/dblockers", verifyToken, addDrone);
 router.patch("/api/dblcokers/:id", verifyToken, updateDrone);
 router.post("/api/dblockers/:id", verifyToken, turnDrone);
-router.delete("/drone/:id", verifyToken, deleteDrone);
+router.delete("/api/dblcokers/:id", verifyToken, deleteDrone);
 
 export default router;
