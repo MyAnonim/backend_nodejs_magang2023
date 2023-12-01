@@ -340,17 +340,6 @@ export const turnDrone = async (req, res) => {
     const gps = responseFromESP.data.data.jammer_gps;
     const temperature = responseFromESP.data.data.temp;
 
-    // // Perbarui data di database berdasarkan respon dari ESP8266
-    // await DblockerApi.update(
-    //   {
-    //     jammer_rc: responseFromESP.data.jammer_rc_status,
-    //     jammer_gps: responseFromESP.data.jammer_gps_status,
-    //   },
-    //   {
-    //     where: { id: userId },
-    //   }
-    // );
-
     const logs = await prisma.log.create({
       data: {
         nama_user: namaUser,
