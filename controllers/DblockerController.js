@@ -141,11 +141,12 @@ export const addDrone = async (req, res) => {
   const { nomor_seri, area_name, ip_addr, location } = req.body;
 
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const accessToken = req.cookies.accessToken;
+    console.log(accessToken)
 
     const user = await prisma.users.findMany({
       where: {
-        token: refreshToken,
+        token: accessToken,
       },
     });
 
@@ -229,17 +230,19 @@ export const updateDrone = async (req, res) => {
     });
     console.log(data);
 
-    const refreshToken = req.cookies.refreshToken;
+    const accessToken= req.cookies.accessToken;
+    console.log(accessToken)
 
     const user = await prisma.users.findMany({
       where: {
-        token: refreshToken,
+        token: accessToken,
       },
       select: {
         nama: true,
         id: true,
       },
     });
+    console.log(user[0])
 
     const namaUser = user[0].nama;
     const userId = user[0].id;
@@ -296,13 +299,14 @@ export const turnDrone = async (req, res) => {
   const dblockerId = Number(req.params.id); // Mengambil ID dari parameter URL
 
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const accessToken = req.cookies.accessToken;
 
     const user = await prisma.users.findMany({
       where: {
-        token: refreshToken,
+        token: accessToken,
       },
     });
+    console.log(user)
 
     const userId = user[0].id;
     const Username = user[0].username;
@@ -369,12 +373,6 @@ export const turnDrone = async (req, res) => {
         },
       },
     });
-
-    // Kirim pembaruan ke klien melalui WebSocket
-    // io.emit("updateData", {
-    //   jammer_rc: responseFromESP.data.jammer_rc_status,
-    //   jammer_gps: responseFromESP.data.jammer_gps_status,
-    // });
 
     // Mendapatkan objek tanggal dari createdAt
     const createdAtDate = logs.timestamp;

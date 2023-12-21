@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const getLogs = async (req, res) => {
-  const { date_from, date_to } = req.body;
+  const { date_from, date_to } = req.query;
 
   try {
     // Pengecekan apakah parameter tanggal ada
@@ -62,7 +62,7 @@ export const getLogs = async (req, res) => {
 };
 
 export const getLogsById = async (req, res) => {
-  const { date_from, date_to } = req.body;
+  const { date_from, date_to } = req.query;
 
   try {
     // Pengecekan apakah parameter tanggal ada

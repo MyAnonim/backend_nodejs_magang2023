@@ -4,7 +4,7 @@ import { verifyToken } from "../middleware/VerifyToken.js";
 
 const router = express.Router();
 
-router.get("/api/dblcokers/logs", verifyToken, getLogs);
-router.get("/api/dblcokers/logs/:id", verifyToken, getLogsById);
+router.get("/api/dblockers/logs", verifyToken, getLogs);
+router.get("/api/dblockers/logs/:id", verifyToken, getLogsById);
 
 export default router;
